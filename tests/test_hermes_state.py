@@ -1349,6 +1349,34 @@ class TestListSessionsRich:
         assert "\n" not in sessions[0]["preview"]
         assert "Line one Line two" in sessions[0]["preview"]
 
+    def test_include_children_false_excludes_child_sessions(self, db):
+        """By default (include_children=False), sessions with parent_session_id are hidden."""
+        db.create_session("s1", "qqbot")
+        db.create_session("s2", "qqbot", parent_session_id="s1")  # compression child
+        db.create_session("s3", "qqbot", parent_session_id="s2")  # compression child
+        db.create_session("s4", "cli")
+        # Default: only top-level sessions
+        sessions = db.list_sessions_rich()
+        ids = [s["id"] for s in sessions]
+        assert "s1" in ids
+        assert "s4" in ids
+        assert "s2" not in ids  # child — filtered out
+        assert "s3" not in ids  # grandchild — filtered out
+
+    def test_include_children_true_returns_all_sessions(self, db):
+        """With include_children=True, all sessions including compression continuations are returned."""
+        db.create_session("s1", "qqbot")
+        db.create_session("s2", "qqbot", parent_session_id="s1")
+        db.create_session("s3", "qqbot", parent_session_id="s2")
+        db.create_session("s4", "cli")
+        sessions = db.list_sessions_rich(include_children=True)
+        ids = [s["id"] for s in sessions]
+        assert "s1" in ids
+        assert "s2" in ids
+        assert "s3" in ids
+        assert "s4" in ids
+        assert len(sessions) == 4
+
 
 # =========================================================================
 # Session source exclusion (--source flag for third-party isolation)
