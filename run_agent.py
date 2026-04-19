@@ -7786,11 +7786,12 @@ class AIAgent:
                     model=self.model,
                     parent_session_id=old_session_id,
                 )
-                # Auto-number the title for the continuation session
+                # Inherit the parent's title unchanged — compression is a continuation
+                # of the same conversation, not a new branch. Branch titles use
+                # get_next_title_in_lineage() which adds #N numbering.
                 if old_title:
                     try:
-                        new_title = self._session_db.get_next_title_in_lineage(old_title)
-                        self._session_db.set_session_title(self.session_id, new_title)
+                        self._session_db.set_session_title(self.session_id, old_title)
                     except (ValueError, Exception) as e:
                         logger.debug("Could not propagate title on compression: %s", e)
                 self._session_db.update_system_prompt(self.session_id, new_system_prompt)
